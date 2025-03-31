@@ -10,7 +10,7 @@ static uint64_t ComputeMask(uint32_t mstart, uint32_t mstop)
     return mstart <= mstop ? value : ~value;
 }
 
-bool Recompiler::LoadConfig(const std::string_view& configFilePath)
+bool Recompiler::LoadConfig(const std::string_view &configFilePath)
 {
     config.Load(configFilePath);
 
@@ -38,7 +38,7 @@ bool Recompiler::LoadConfig(const std::string_view& configFilePath)
                         std::ofstream stream(config.directoryPath + config.patchedFilePath, std::ios::binary);
                         if (stream.good())
                         {
-                            stream.write(reinterpret_cast<const char*>(file.data()), file.size());
+                            stream.write(reinterpret_cast<const char *>(file.data()), file.size());
                             stream.close();
                         }
                     }
@@ -101,15 +101,15 @@ void Recompiler::Analyse()
         {
             if (config.restGpr14Address != 0)
             {
-                auto& restgpr = functions.emplace_back();
+                auto &restgpr = functions.emplace_back();
                 restgpr.base = config.restGpr14Address + (i - 14) * 4;
                 restgpr.size = (32 - i) * 4 + 12;
-                image.symbols.emplace(Symbol{ fmt::format("__restgprlr_{}", i), restgpr.base, restgpr.size, Symbol_Function });
+                image.symbols.emplace(Symbol{fmt::format("__restgprlr_{}", i), restgpr.base, restgpr.size, Symbol_Function});
             }
 
             if (config.saveGpr14Address != 0)
             {
-                auto& savegpr = functions.emplace_back();
+                auto &savegpr = functions.emplace_back();
                 savegpr.base = config.saveGpr14Address + (i - 14) * 4;
                 savegpr.size = (32 - i) * 4 + 8;
                 image.symbols.emplace(fmt::format("__savegprlr_{}", i), savegpr.base, savegpr.size, Symbol_Function);
@@ -117,7 +117,7 @@ void Recompiler::Analyse()
 
             if (config.restFpr14Address != 0)
             {
-                auto& restfpr = functions.emplace_back();
+                auto &restfpr = functions.emplace_back();
                 restfpr.base = config.restFpr14Address + (i - 14) * 4;
                 restfpr.size = (32 - i) * 4 + 4;
                 image.symbols.emplace(fmt::format("__restfpr_{}", i), restfpr.base, restfpr.size, Symbol_Function);
@@ -125,7 +125,7 @@ void Recompiler::Analyse()
 
             if (config.saveFpr14Address != 0)
             {
-                auto& savefpr = functions.emplace_back();
+                auto &savefpr = functions.emplace_back();
                 savefpr.base = config.saveFpr14Address + (i - 14) * 4;
                 savefpr.size = (32 - i) * 4 + 4;
                 image.symbols.emplace(fmt::format("__savefpr_{}", i), savefpr.base, savefpr.size, Symbol_Function);
@@ -133,7 +133,7 @@ void Recompiler::Analyse()
 
             if (config.restVmx14Address != 0)
             {
-                auto& restvmx = functions.emplace_back();
+                auto &restvmx = functions.emplace_back();
                 restvmx.base = config.restVmx14Address + (i - 14) * 8;
                 restvmx.size = (32 - i) * 8 + 4;
                 image.symbols.emplace(fmt::format("__restvmx_{}", i), restvmx.base, restvmx.size, Symbol_Function);
@@ -141,7 +141,7 @@ void Recompiler::Analyse()
 
             if (config.saveVmx14Address != 0)
             {
-                auto& savevmx = functions.emplace_back();
+                auto &savevmx = functions.emplace_back();
                 savevmx.base = config.saveVmx14Address + (i - 14) * 8;
                 savevmx.size = (32 - i) * 8 + 4;
                 image.symbols.emplace(fmt::format("__savevmx_{}", i), savevmx.base, savevmx.size, Symbol_Function);
@@ -152,7 +152,7 @@ void Recompiler::Analyse()
         {
             if (config.restVmx64Address != 0)
             {
-                auto& restvmx = functions.emplace_back();
+                auto &restvmx = functions.emplace_back();
                 restvmx.base = config.restVmx64Address + (i - 64) * 8;
                 restvmx.size = (128 - i) * 8 + 4;
                 image.symbols.emplace(fmt::format("__restvmx_{}", i), restvmx.base, restvmx.size, Symbol_Function);
@@ -160,7 +160,7 @@ void Recompiler::Analyse()
 
             if (config.saveVmx64Address != 0)
             {
-                auto& savevmx = functions.emplace_back();
+                auto &savevmx = functions.emplace_back();
                 savevmx.base = config.saveVmx64Address + (i - 64) * 8;
                 savevmx.size = (128 - i) * 8 + 4;
                 image.symbols.emplace(fmt::format("__savevmx_{}", i), savevmx.base, savevmx.size, Symbol_Function);
@@ -168,15 +168,15 @@ void Recompiler::Analyse()
         }
     }
 
-    for (auto& [address, size] : config.functions)
+    for (auto &[address, size] : config.functions)
     {
         functions.emplace_back(address, size);
         image.symbols.emplace(fmt::format("sub_{:X}", address), address, size, Symbol_Function);
     }
 
-    auto& pdata = *image.Find(".pdata");
+    auto &pdata = *image.Find(".pdata");
     size_t count = pdata.size / sizeof(IMAGE_CE_RUNTIME_FUNCTION);
-    auto* pf = (IMAGE_CE_RUNTIME_FUNCTION*)pdata.data;
+    auto *pf = (IMAGE_CE_RUNTIME_FUNCTION *)pdata.data;
     for (size_t i = 0; i < count; i++)
     {
         auto fn = pf[i];
@@ -185,7 +185,7 @@ void Recompiler::Analyse()
 
         if (image.symbols.find(fn.BeginAddress) == image.symbols.end())
         {
-            auto& f = functions.emplace_back();
+            auto &f = functions.emplace_back();
             f.base = fn.BeginAddress;
             f.size = fn.FunctionLength * 4;
 
@@ -193,19 +193,19 @@ void Recompiler::Analyse()
         }
     }
 
-    for (const auto& section : image.sections)
+    for (const auto &section : image.sections)
     {
         if (!(section.flags & SectionFlags_Code))
         {
             continue;
         }
         size_t base = section.base;
-        uint8_t* data = section.data;
-        uint8_t* dataEnd = section.data + section.size;
+        uint8_t *data = section.data;
+        uint8_t *dataEnd = section.data + section.size;
 
         while (data < dataEnd)
         {
-            uint32_t insn = ByteSwap(*(uint32_t*)data);
+            uint32_t insn = ByteSwap(*(uint32_t *)data);
             if (PPC_OP(insn) == PPC_OP_B && PPC_BL(insn))
             {
                 size_t address = base + (data - section.data) + PPC_BI(insn);
@@ -213,7 +213,7 @@ void Recompiler::Analyse()
                 if (address >= section.base && address < section.base + section.size && image.symbols.find(address) == image.symbols.end())
                 {
                     auto data = section.data + address - section.base;
-                    auto& fn = functions.emplace_back(Function::Analyze(data, section.base + section.size - address, address));
+                    auto &fn = functions.emplace_back(Function::Analyze(data, section.base + section.size - address, address));
                     image.symbols.emplace(fmt::format("sub_{:X}", fn.base), fn.base, fn.size, Symbol_Function);
                 }
             }
@@ -224,7 +224,7 @@ void Recompiler::Analyse()
 
         while (data < dataEnd)
         {
-            auto invalidInstr = config.invalidInstructions.find(ByteSwap(*(uint32_t*)data));
+            auto invalidInstr = config.invalidInstructions.find(ByteSwap(*(uint32_t *)data));
             if (invalidInstr != config.invalidInstructions.end())
             {
                 base += invalidInstr->second;
@@ -242,7 +242,7 @@ void Recompiler::Analyse()
             }
             else
             {
-                auto& fn = functions.emplace_back(Function::Analyze(data, dataEnd - data, base));
+                auto &fn = functions.emplace_back(Function::Analyze(data, dataEnd - data, base));
                 image.symbols.emplace(fmt::format("sub_{:X}", fn.base), fn.base, fn.size, Symbol_Function);
 
                 base += fn.size;
@@ -251,268 +251,269 @@ void Recompiler::Analyse()
         }
     }
 
-    std::sort(functions.begin(), functions.end(), [](auto& lhs, auto& rhs) { return lhs.base < rhs.base; });
+    std::sort(functions.begin(), functions.end(), [](auto &lhs, auto &rhs)
+              { return lhs.base < rhs.base; });
 }
 
 bool Recompiler::Recompile(
-    const Function& fn,
+    const Function &fn,
     uint32_t base,
-    const ppc_insn& insn,
-    const uint32_t* data,
-    std::unordered_map<uint32_t, RecompilerSwitchTable>::iterator& switchTable,
-    RecompilerLocalVariables& localVariables,
-    CSRState& csrState)
+    const ppc_insn &insn,
+    const uint32_t *data,
+    std::unordered_map<uint32_t, RecompilerSwitchTable>::iterator &switchTable,
+    RecompilerLocalVariables &localVariables,
+    CSRState &csrState)
 {
     println("\t// {} {}", insn.opcode->name, insn.op_str);
 
     // TODO: we could cache these formats in an array
     auto r = [&](size_t index)
+    {
+        if ((config.nonArgumentRegistersAsLocalVariables && (index == 0 || index == 2 || index == 11 || index == 12)) ||
+            (config.nonVolatileRegistersAsLocalVariables && index >= 14))
         {
-            if ((config.nonArgumentRegistersAsLocalVariables && (index == 0 || index == 2 || index == 11 || index == 12)) || 
-                (config.nonVolatileRegistersAsLocalVariables && index >= 14))
-            {
-                localVariables.r[index] = true;
-                return fmt::format("r{}", index);
-            }
-            return fmt::format("ctx.r{}", index);
-        };
+            localVariables.r[index] = true;
+            return fmt::format("r{}", index);
+        }
+        return fmt::format("ctx.r{}", index);
+    };
 
     auto f = [&](size_t index)
+    {
+        if ((config.nonArgumentRegistersAsLocalVariables && index == 0) ||
+            (config.nonVolatileRegistersAsLocalVariables && index >= 14))
         {
-            if ((config.nonArgumentRegistersAsLocalVariables && index == 0) ||
-                (config.nonVolatileRegistersAsLocalVariables && index >= 14))
-            {
-                localVariables.f[index] = true;
-                return fmt::format("f{}", index);
-            }
-            return fmt::format("ctx.f{}", index);
-        };
+            localVariables.f[index] = true;
+            return fmt::format("f{}", index);
+        }
+        return fmt::format("ctx.f{}", index);
+    };
 
     auto v = [&](size_t index)
+    {
+        if ((config.nonArgumentRegistersAsLocalVariables && (index >= 32 && index <= 63)) ||
+            (config.nonVolatileRegistersAsLocalVariables && ((index >= 14 && index <= 31) || (index >= 64 && index <= 127))))
         {
-            if ((config.nonArgumentRegistersAsLocalVariables && (index >= 32 && index <= 63)) ||
-                (config.nonVolatileRegistersAsLocalVariables && ((index >= 14 && index <= 31) || (index >= 64 && index <= 127))))
-            {
-                localVariables.v[index] = true;
-                return fmt::format("v{}", index);
-            }
-            return fmt::format("ctx.v{}", index);
-        };
+            localVariables.v[index] = true;
+            return fmt::format("v{}", index);
+        }
+        return fmt::format("ctx.v{}", index);
+    };
 
     auto cr = [&](size_t index)
+    {
+        if (config.crRegistersAsLocalVariables)
         {
-            if (config.crRegistersAsLocalVariables)
-            {
-                localVariables.cr[index] = true;
-                return fmt::format("cr{}", index);
-            }
-            return fmt::format("ctx.cr{}", index);
-        };
+            localVariables.cr[index] = true;
+            return fmt::format("cr{}", index);
+        }
+        return fmt::format("ctx.cr{}", index);
+    };
 
     auto ctr = [&]()
+    {
+        if (config.ctrAsLocalVariable)
         {
-            if (config.ctrAsLocalVariable)
-            {
-                localVariables.ctr = true;
-                return "ctr";
-            }
-            return "ctx.ctr";
-        };
+            localVariables.ctr = true;
+            return "ctr";
+        }
+        return "ctx.ctr";
+    };
 
     auto xer = [&]()
+    {
+        if (config.xerAsLocalVariable)
         {
-            if (config.xerAsLocalVariable)
-            {
-                localVariables.xer = true;
-                return "xer";
-            }
-            return "ctx.xer";
-        };
+            localVariables.xer = true;
+            return "xer";
+        }
+        return "ctx.xer";
+    };
 
     auto reserved = [&]()
+    {
+        if (config.reservedRegisterAsLocalVariable)
         {
-            if (config.reservedRegisterAsLocalVariable)
-            {
-                localVariables.reserved = true;
-                return "reserved";
-            }
-            return "ctx.reserved";
-        };
+            localVariables.reserved = true;
+            return "reserved";
+        }
+        return "ctx.reserved";
+    };
 
     auto temp = [&]()
-        {
-            localVariables.temp = true;
-            return "temp";
-        };
+    {
+        localVariables.temp = true;
+        return "temp";
+    };
 
     auto vTemp = [&]()
-        {
-            localVariables.vTemp = true;
-            return "vTemp";
-        };
+    {
+        localVariables.vTemp = true;
+        return "vTemp";
+    };
 
     auto env = [&]()
-        {
-            localVariables.env = true;
-            return "env";
-        };
+    {
+        localVariables.env = true;
+        return "env";
+    };
 
     auto ea = [&]()
-        {
-            localVariables.ea = true;
-            return "ea";
-        };
+    {
+        localVariables.ea = true;
+        return "ea";
+    };
 
     // TODO (Sajid): Check for out of bounds access
     auto mmioStore = [&]() -> bool
-        {
-            return *(data + 1) == c_eieio;
-        };
+    {
+        return *(data + 1) == c_eieio;
+    };
 
     auto printFunctionCall = [&](uint32_t address)
+    {
+        if (address == config.longJmpAddress)
         {
-            if (address == config.longJmpAddress)
-            {
-                println("\tlongjmp(*reinterpret_cast<jmp_buf*>(base + {}.u32), {}.s32);", r(3), r(4));
-            }
-            else if (address == config.setJmpAddress)
-            {
-                println("\t{} = ctx;", env());
-                println("\t{}.s64 = setjmp(*reinterpret_cast<jmp_buf*>(base + {}.u32));", temp(), r(3));
-                println("\tif ({}.s64 != 0) ctx = {};", temp(), env());
-                println("\t{} = {};", r(3), temp());
-            }
-            else
-            {
-                auto targetSymbol = image.symbols.find(address);
+            println("\tlongjmp(*reinterpret_cast<jmp_buf*>(base + {}.u32), {}.s32);", r(3), r(4));
+        }
+        else if (address == config.setJmpAddress)
+        {
+            println("\t{} = ctx;", env());
+            println("\t{}.s64 = setjmp(*reinterpret_cast<jmp_buf*>(base + {}.u32));", temp(), r(3));
+            println("\tif ({}.s64 != 0) ctx = {};", temp(), env());
+            println("\t{} = {};", r(3), temp());
+        }
+        else
+        {
+            auto targetSymbol = image.symbols.find(address);
 
-                if (targetSymbol != image.symbols.end() && targetSymbol->address == address && targetSymbol->type == Symbol_Function)
+            if (targetSymbol != image.symbols.end() && targetSymbol->address == address && targetSymbol->type == Symbol_Function)
+            {
+                if (config.nonVolatileRegistersAsLocalVariables && (targetSymbol->name.find("__rest") == 0 || targetSymbol->name.find("__save") == 0))
                 {
-                    if (config.nonVolatileRegistersAsLocalVariables && (targetSymbol->name.find("__rest") == 0 || targetSymbol->name.find("__save") == 0))
-                    {
-                        // print nothing
-                    }
-                    else
-                    {
-                        println("\t{}(ctx, base);", targetSymbol->name);
-                    }
+                    // print nothing
                 }
                 else
                 {
-                    println("\t// ERROR {:X}", address);
+                    println("\t{}(ctx, base);", targetSymbol->name);
                 }
-            }
-        };
-
-    auto printConditionalBranch = [&](bool not_, const std::string_view& cond)
-        {
-            if (insn.operands[1] < fn.base || insn.operands[1] >= fn.base + fn.size)
-            {
-                println("\tif ({}{}.{}) {{", not_ ? "!" : "", cr(insn.operands[0]), cond);
-                print("\t");
-                printFunctionCall(insn.operands[1]);
-                println("\t\treturn;");
-                println("\t}}");
             }
             else
             {
-                println("\tif ({}{}.{}) goto loc_{:X};", not_ ? "!" : "", cr(insn.operands[0]), cond, insn.operands[1]);
+                println("\t// ERROR {:X}", address);
             }
-        };
+        }
+    };
+
+    auto printConditionalBranch = [&](bool not_, const std::string_view &cond)
+    {
+        if (insn.operands[1] < fn.base || insn.operands[1] >= fn.base + fn.size)
+        {
+            println("\tif ({}{}.{}) {{", not_ ? "!" : "", cr(insn.operands[0]), cond);
+            print("\t");
+            printFunctionCall(insn.operands[1]);
+            println("\t\treturn;");
+            println("\t}}");
+        }
+        else
+        {
+            println("\tif ({}{}.{}) goto loc_{:X};", not_ ? "!" : "", cr(insn.operands[0]), cond, insn.operands[1]);
+        }
+    };
 
     auto printSetFlushMode = [&](bool enable)
+    {
+        auto newState = enable ? CSRState::VMX : CSRState::FPU;
+        if (csrState != newState)
         {
-            auto newState = enable ? CSRState::VMX : CSRState::FPU;
-            if (csrState != newState)
-            {
-                auto prefix = enable ? "enable" : "disable";
-                auto suffix = csrState != CSRState::Unknown ? "Unconditional" : "";
-                println("\tctx.fpscr.{}FlushMode{}();", prefix, suffix);
+            auto prefix = enable ? "enable" : "disable";
+            auto suffix = csrState != CSRState::Unknown ? "Unconditional" : "";
+            println("\tctx.fpscr.{}FlushMode{}();", prefix, suffix);
 
-                csrState = newState;
-            }
-        };
+            csrState = newState;
+        }
+    };
 
     auto midAsmHook = config.midAsmHooks.find(base);
 
     auto printMidAsmHook = [&]()
+    {
+        bool returnsBool = midAsmHook->second.returnOnFalse || midAsmHook->second.returnOnTrue ||
+                           midAsmHook->second.jumpAddressOnFalse != NULL || midAsmHook->second.jumpAddressOnTrue != NULL;
+
+        print("\t");
+        if (returnsBool)
+            print("if (");
+
+        print("{}(", midAsmHook->second.name);
+        for (auto &reg : midAsmHook->second.registers)
         {
-            bool returnsBool = midAsmHook->second.returnOnFalse || midAsmHook->second.returnOnTrue ||
-                midAsmHook->second.jumpAddressOnFalse != NULL || midAsmHook->second.jumpAddressOnTrue != NULL;
+            if (out.back() != '(')
+                out += ", ";
 
-            print("\t");
-            if (returnsBool)
-                print("if (");
-
-            print("{}(", midAsmHook->second.name);
-            for (auto& reg : midAsmHook->second.registers)
+            switch (reg[0])
             {
-                if (out.back() != '(')
-                    out += ", ";
+            case 'c':
+                if (reg == "ctr")
+                    out += ctr();
+                else
+                    out += cr(std::atoi(reg.c_str() + 2));
+                break;
 
-                switch (reg[0])
-                {
-                case 'c':
-                    if (reg == "ctr")
-                        out += ctr();
-                    else
-                        out += cr(std::atoi(reg.c_str() + 2));
-                    break;
+            case 'x':
+                out += xer();
+                break;
 
-                case 'x':
-                    out += xer();
-                    break;
+            case 'r':
+                if (reg == "reserved")
+                    out += reserved();
+                else
+                    out += r(std::atoi(reg.c_str() + 1));
+                break;
 
-                case 'r':
-                    if (reg == "reserved")
-                        out += reserved();
-                    else
-                        out += r(std::atoi(reg.c_str() + 1));
-                    break;
+            case 'f':
+                if (reg == "fpscr")
+                    out += "ctx.fpscr";
+                else
+                    out += f(std::atoi(reg.c_str() + 1));
+                break;
 
-                case 'f':
-                    if (reg == "fpscr")
-                        out += "ctx.fpscr";
-                    else
-                        out += f(std::atoi(reg.c_str() + 1));
-                    break;
-
-                case 'v':
-                    out += v(std::atoi(reg.c_str() + 1));
-                    break;
-                }
+            case 'v':
+                out += v(std::atoi(reg.c_str() + 1));
+                break;
             }
+        }
 
-            if (returnsBool)
-            {
-                println(")) {{");
+        if (returnsBool)
+        {
+            println(")) {{");
 
-                if (midAsmHook->second.returnOnTrue)
-                    println("\t\treturn;");
-                else if (midAsmHook->second.jumpAddressOnTrue != NULL)
-                    println("\t\tgoto loc_{:X};", midAsmHook->second.jumpAddressOnTrue);
+            if (midAsmHook->second.returnOnTrue)
+                println("\t\treturn;");
+            else if (midAsmHook->second.jumpAddressOnTrue != NULL)
+                println("\t\tgoto loc_{:X};", midAsmHook->second.jumpAddressOnTrue);
 
-                println("\t}}");
+            println("\t}}");
 
-                println("\telse {{");
+            println("\telse {{");
 
-                if (midAsmHook->second.returnOnFalse)
-                    println("\t\treturn;");
-                else if (midAsmHook->second.jumpAddressOnFalse != NULL)
-                    println("\t\tgoto loc_{:X};", midAsmHook->second.jumpAddressOnFalse);
+            if (midAsmHook->second.returnOnFalse)
+                println("\t\treturn;");
+            else if (midAsmHook->second.jumpAddressOnFalse != NULL)
+                println("\t\tgoto loc_{:X};", midAsmHook->second.jumpAddressOnFalse);
 
-                println("\t}}");
-            }
-            else
-            {
-                println(");");
+            println("\t}}");
+        }
+        else
+        {
+            println(");");
 
-                if (midAsmHook->second.ret)
-                    println("\treturn;");
-                else if (midAsmHook->second.jumpAddress != NULL)
-                    println("\tgoto loc_{:X};", midAsmHook->second.jumpAddress);
-            }
-        };
+            if (midAsmHook->second.ret)
+                println("\treturn;");
+            else if (midAsmHook->second.jumpAddress != NULL)
+                println("\tgoto loc_{:X};", midAsmHook->second.jumpAddress);
+        }
+    };
 
     if (midAsmHook != config.midAsmHooks.end() && !midAsmHook->second.afterInstruction)
         printMidAsmHook();
@@ -520,8 +521,10 @@ bool Recompiler::Recompile(
     int id = insn.opcode->id;
 
     // Handling instructions that don't disassemble correctly for some reason here
-    if (id == PPC_INST_VUPKHSB128 && insn.operands[2] == 0x60) id = PPC_INST_VUPKHSH128;
-    else if (id == PPC_INST_VUPKLSB128 && insn.operands[2] == 0x60) id = PPC_INST_VUPKLSH128;
+    if (id == PPC_INST_VUPKHSB128 && insn.operands[2] == 0x60)
+        id = PPC_INST_VUPKHSH128;
+    else if (id == PPC_INST_VUPKLSB128 && insn.operands[2] == 0x60)
+        id = PPC_INST_VUPKLSH128;
 
     switch (id)
     {
@@ -1235,7 +1238,7 @@ bool Recompiler::Recompile(
     case PPC_INST_MFCR:
         for (size_t i = 0; i < 32; i++)
         {
-            constexpr std::string_view fields[] = { "lt", "gt", "eq", "so" };
+            constexpr std::string_view fields[] = {"lt", "gt", "eq", "so"};
             println("\t{}.u64 {}= {}.{} ? 0x{:X} : 0;", r(insn.operands[0]), i == 0 ? "" : "|", cr(i / 4), fields[i % 4], 1u << (31 - i));
         }
         break;
@@ -1272,7 +1275,7 @@ bool Recompiler::Recompile(
     case PPC_INST_MTCR:
         for (size_t i = 0; i < 32; i++)
         {
-            constexpr std::string_view fields[] = { "lt", "gt", "eq", "so" };
+            constexpr std::string_view fields[] = {"lt", "gt", "eq", "so"};
             println("\t{}.{} = ({}.u32 & 0x{:X}) != 0;", cr(i / 4), fields[i % 4], r(insn.operands[0]), 1u << (31 - i));
         }
         break;
@@ -1803,7 +1806,7 @@ bool Recompiler::Recompile(
         if (insn.operands[2] != 0)
         {
             const float value = ldexp(1.0f, -int32_t(insn.operands[2]));
-            println("_mm_mul_ps(_mm_cvtepi32_ps(_mm_load_si128((__m128i*){}.u32)), _mm_castsi128_ps(_mm_set1_epi32(int(0x{:X})))));", v(insn.operands[1]), *reinterpret_cast<const uint32_t*>(&value));
+            println("_mm_mul_ps(_mm_cvtepi32_ps(_mm_load_si128((__m128i*){}.u32)), _mm_castsi128_ps(_mm_set1_epi32(int(0x{:X})))));", v(insn.operands[1]), *reinterpret_cast<const uint32_t *>(&value));
         }
         else
         {
@@ -1820,7 +1823,7 @@ bool Recompiler::Recompile(
         if (insn.operands[2] != 0)
         {
             const float value = ldexp(1.0f, -int32_t(insn.operands[2]));
-            println("_mm_mul_ps(_mm_cvtepu32_ps_(_mm_load_si128((__m128i*){}.u32)), _mm_castsi128_ps(_mm_set1_epi32(int(0x{:X})))));", v(insn.operands[1]), *reinterpret_cast<const uint32_t*>(&value));
+            println("_mm_mul_ps(_mm_cvtepu32_ps_(_mm_load_si128((__m128i*){}.u32)), _mm_castsi128_ps(_mm_set1_epi32(int(0x{:X})))));", v(insn.operands[1]), *reinterpret_cast<const uint32_t *>(&value));
         }
         else
         {
@@ -2006,7 +2009,7 @@ bool Recompiler::Recompile(
 
             for (size_t i = 0; i < 4; i++)
             {
-                constexpr size_t indices[] = { 3, 0, 1, 2 };
+                constexpr size_t indices[] = {3, 0, 1, 2};
                 println("\t{}.u32[{}] = 0x404000FF;", vTemp(), i);
                 println("\t{}.f32[{}] = {}.f32[{}] < 3.0f ? 3.0f : ({}.f32[{}] > {}.f32[{}] ? {}.f32[{}] : {}.f32[{}]);", vTemp(), i, v(insn.operands[1]), i, v(insn.operands[1]), i, vTemp(), i, vTemp(), i, v(insn.operands[1]), i);
                 println("\t{}.u32 {}= uint32_t({}.u8[{}]) << {};", temp(), i == 0 ? "" : "|", vTemp(), i * 4, indices[i] * 8);
@@ -2052,7 +2055,7 @@ bool Recompiler::Recompile(
 
     case PPC_INST_VRLIMI128:
     {
-        constexpr size_t shuffles[] = { _MM_SHUFFLE(3, 2, 1, 0), _MM_SHUFFLE(2, 1, 0, 3), _MM_SHUFFLE(1, 0, 3, 2), _MM_SHUFFLE(0, 3, 2, 1) };
+        constexpr size_t shuffles[] = {_MM_SHUFFLE(3, 2, 1, 0), _MM_SHUFFLE(2, 1, 0, 3), _MM_SHUFFLE(1, 0, 3, 2), _MM_SHUFFLE(0, 3, 2, 1)};
         println("\t_mm_store_ps({}.f32, _mm_blend_ps(_mm_load_ps({}.f32), _mm_permute_ps(_mm_load_ps({}.f32), {}), {}));", v(insn.operands[0]), v(insn.operands[0]), v(insn.operands[1]), shuffles[insn.operands[3]], insn.operands[2]);
         break;
     }
@@ -2172,7 +2175,7 @@ bool Recompiler::Recompile(
         case 0: // D3D color
             for (size_t i = 0; i < 4; i++)
             {
-                constexpr size_t indices[] = { 3, 0, 1, 2 };
+                constexpr size_t indices[] = {3, 0, 1, 2};
                 println("\t{}.u32[{}] = {}.u8[{}] | 0x3F800000;", vTemp(), i, v(insn.operands[1]), indices[i]);
             }
             println("\t{} = {};", v(insn.operands[0]), vTemp());
@@ -2241,6 +2244,16 @@ bool Recompiler::Recompile(
         println("\t{}.u64 = {}.u64 ^ {};", r(insn.operands[0]), r(insn.operands[1]), insn.operands[2] << 16);
         break;
 
+    case PPC_INST_MULHD:
+        println("\t{}.s64 = (int64_t)((__int128){}.s64 * (__int128){}.s64 >> 64);",
+                r(insn.operands[0]), r(insn.operands[1]), r(insn.operands[2]));
+        break;
+
+    case PPC_INST_MULHDU:
+        println("\t{}.u64 = (uint64_t)((__uint128_t){}.u64 * (__uint128_t){}.u64 >> 64);",
+                r(insn.operands[0]), r(insn.operands[1]), r(insn.operands[2]));
+        break;
+
     default:
         return false;
     }
@@ -2256,22 +2269,22 @@ bool Recompiler::Recompile(
 
     if (midAsmHook != config.midAsmHooks.end() && midAsmHook->second.afterInstruction)
         printMidAsmHook();
-    
+
     return true;
 }
 
-bool Recompiler::Recompile(const Function& fn)
+bool Recompiler::Recompile(const Function &fn)
 {
     auto base = fn.base;
     auto end = base + fn.size;
-    auto* data = (uint32_t*)image.Find(base);
+    auto *data = (uint32_t *)image.Find(base);
 
     static std::unordered_set<size_t> labels;
     labels.clear();
 
     for (size_t addr = base; addr < end; addr += 4)
     {
-        const uint32_t instruction = ByteSwap(*(uint32_t*)((char*)data + addr - base));
+        const uint32_t instruction = ByteSwap(*(uint32_t *)((char *)data + addr - base));
         if (!PPC_BL(instruction))
         {
             const size_t op = PPC_OP(instruction);
@@ -2302,7 +2315,7 @@ bool Recompiler::Recompile(const Function& fn)
             }
 
             print("{}(", midAsmHook->second.name);
-            for (auto& reg : midAsmHook->second.registers)
+            for (auto &reg : midAsmHook->second.registers)
             {
                 if (out.back() != '(')
                     out += ", ";
@@ -2340,9 +2353,9 @@ bool Recompiler::Recompile(const Function& fn)
             println(");\n");
 
             if (midAsmHook->second.jumpAddress != NULL)
-                labels.emplace(midAsmHook->second.jumpAddress);       
+                labels.emplace(midAsmHook->second.jumpAddress);
             if (midAsmHook->second.jumpAddressOnTrue != NULL)
-                labels.emplace(midAsmHook->second.jumpAddressOnTrue);    
+                labels.emplace(midAsmHook->second.jumpAddressOnTrue);
             if (midAsmHook->second.jumpAddressOnFalse != NULL)
                 labels.emplace(midAsmHook->second.jumpAddressOnFalse);
         }
@@ -2431,7 +2444,7 @@ bool Recompiler::Recompile(const Function& fn)
 
     std::swap(out, tempString);
     if (localVariables.ctr)
-        println("\tPPCRegister ctr{{}};");   
+        println("\tPPCRegister ctr{{}};");
     if (localVariables.xer)
         println("\tPPCXERRegister xer{{}};");
     if (localVariables.reserved)
@@ -2462,11 +2475,11 @@ bool Recompiler::Recompile(const Function& fn)
     }
 
     if (localVariables.env)
-        println("\tPPCContext env{{}};"); 
-    
+        println("\tPPCContext env{{}};");
+
     if (localVariables.temp)
-        println("\tPPCRegister temp{{}};"); 
-    
+        println("\tPPCRegister temp{{}};");
+
     if (localVariables.vTemp)
         println("\tPPCVRegister vTemp{{}};");
 
@@ -2478,7 +2491,7 @@ bool Recompiler::Recompile(const Function& fn)
     return allRecompiled;
 }
 
-void Recompiler::Recompile(const std::filesystem::path& headerFilePath)
+void Recompiler::Recompile(const std::filesystem::path &headerFilePath)
 {
     out.reserve(10 * 1024 * 1024);
 
@@ -2489,19 +2502,19 @@ void Recompiler::Recompile(const std::filesystem::path& headerFilePath)
         println("#define PPC_CONFIG_H_INCLUDED\n");
 
         if (config.skipLr)
-            println("#define PPC_CONFIG_SKIP_LR");      
+            println("#define PPC_CONFIG_SKIP_LR");
         if (config.ctrAsLocalVariable)
-            println("#define PPC_CONFIG_CTR_AS_LOCAL");      
+            println("#define PPC_CONFIG_CTR_AS_LOCAL");
         if (config.xerAsLocalVariable)
-            println("#define PPC_CONFIG_XER_AS_LOCAL");      
+            println("#define PPC_CONFIG_XER_AS_LOCAL");
         if (config.reservedRegisterAsLocalVariable)
-            println("#define PPC_CONFIG_RESERVED_AS_LOCAL");      
+            println("#define PPC_CONFIG_RESERVED_AS_LOCAL");
         if (config.skipMsr)
-            println("#define PPC_CONFIG_SKIP_MSR");      
+            println("#define PPC_CONFIG_SKIP_MSR");
         if (config.crRegistersAsLocalVariables)
-            println("#define PPC_CONFIG_CR_AS_LOCAL");      
+            println("#define PPC_CONFIG_CR_AS_LOCAL");
         if (config.nonArgumentRegistersAsLocalVariables)
-            println("#define PPC_CONFIG_NON_ARGUMENT_AS_LOCAL");   
+            println("#define PPC_CONFIG_NON_ARGUMENT_AS_LOCAL");
         if (config.nonVolatileRegistersAsLocalVariables)
             println("#define PPC_CONFIG_NON_VOLATILE_AS_LOCAL");
 
@@ -2509,12 +2522,12 @@ void Recompiler::Recompile(const std::filesystem::path& headerFilePath)
 
         println("#define PPC_IMAGE_BASE 0x{:X}ull", image.base);
         println("#define PPC_IMAGE_SIZE 0x{:X}ull", image.size);
-        
+
         // Extract the address of the minimum code segment to store the function table at.
         size_t codeMin = ~0;
         size_t codeMax = 0;
 
-        for (auto& section : image.sections)
+        for (auto &section : image.sections)
         {
             if ((section.flags & SectionFlags_Code) != 0)
             {
@@ -2544,7 +2557,7 @@ void Recompiler::Recompile(const std::filesystem::path& headerFilePath)
         println("#pragma once");
 
         println("#include \"ppc_config.h\"\n");
-        
+
         std::ifstream stream(headerFilePath);
         if (stream.good())
         {
@@ -2561,7 +2574,7 @@ void Recompiler::Recompile(const std::filesystem::path& headerFilePath)
         println("#include \"ppc_config.h\"");
         println("#include \"ppc_context.h\"\n");
 
-        for (auto& symbol : image.symbols)
+        for (auto &symbol : image.symbols)
             println("PPC_EXTERN_FUNC({});", symbol.name);
 
         SaveCurrentOutData("ppc_recomp_shared.h");
@@ -2571,7 +2584,7 @@ void Recompiler::Recompile(const std::filesystem::path& headerFilePath)
         println("#include \"ppc_recomp_shared.h\"\n");
 
         println("PPCFuncMapping PPCFuncMappings[] = {{");
-        for (auto& symbol : image.symbols)
+        for (auto &symbol : image.symbols)
             println("\t{{ 0x{:X}, {} }},", symbol.address, symbol.name);
 
         println("\t{{ 0, nullptr }}");
@@ -2597,7 +2610,7 @@ void Recompiler::Recompile(const std::filesystem::path& headerFilePath)
     SaveCurrentOutData();
 }
 
-void Recompiler::SaveCurrentOutData(const std::string_view& name)
+void Recompiler::SaveCurrentOutData(const std::string_view &name)
 {
     if (!out.empty())
     {
@@ -2617,7 +2630,7 @@ void Recompiler::SaveCurrentOutData(const std::string_view& name)
             directoryPath += "/";
 
         std::string filePath = fmt::format("{}{}/{}", directoryPath, config.outDirectoryPath, name.empty() ? cppName : name);
-        FILE* f = fopen(filePath.c_str(), "rb");
+        FILE *f = fopen(filePath.c_str(), "rb");
         if (f)
         {
             static std::vector<uint8_t> temp;
