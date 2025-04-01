@@ -1148,6 +1148,15 @@ bool Recompiler::Recompile(
         println("{}.u32) & ~0xF))), _mm_load_si128((__m128i*)VectorMaskL)));", r(insn.operands[2]));
         break;
 
+    // Load Vector Element Half Word Indexed: https://www.nxp.com/docs/en/reference-manual/ALTIVECPEM.pdf
+    // TODO: Verify functionality.
+    case PPC_INST_LVEHX:
+        print("\t_mm_store_si128((__m128i*){}.u8, _mm_shuffle_epi8(_mm_load_si128((__m128i*)(base + ((", v(insn.operands[0]));
+        if (insn.operands[1] != 0)
+            print("{}.u16 + ", r(insn.operands[1]));
+        println("{}.u16) & ~0xF))), _mm_load_si128((__m128i*)VectorMaskL)));", r(insn.operands[2]));
+        break;
+
     case PPC_INST_LVLX:
     case PPC_INST_LVLX128:
         print("\t{}.u32 = ", temp());
@@ -2069,6 +2078,7 @@ bool Recompiler::Recompile(
         break;
 
     case PPC_INST_VSEL:
+    case PPC_INST_VSEL128:
         println("\t_mm_store_si128((__m128i*){}.u8, _mm_or_si128(_mm_andnot_si128(_mm_load_si128((__m128i*){}.u8), _mm_load_si128((__m128i*){}.u8)), _mm_and_si128(_mm_load_si128((__m128i*){}.u8), _mm_load_si128((__m128i*){}.u8))));", v(insn.operands[0]), v(insn.operands[3]), v(insn.operands[1]), v(insn.operands[3]), v(insn.operands[2]));
         break;
 
@@ -2244,6 +2254,26 @@ bool Recompiler::Recompile(
         println("\t{}.u64 = {}.u64 ^ {};", r(insn.operands[0]), r(insn.operands[1]), insn.operands[2] << 16);
         break;
 
+    /*
+        Checklist:
+            - mulhd X
+            - mulhdu X
+            - vaddsws X
+            - vcfpuxws128 x
+            - vcmpgtuw x
+            - vnor128 x
+            - vpkswss128 x
+            - vrlw128 x
+            - vsel128 x
+            - vsl x
+            - vspltish x
+            - vsububm x
+            - vsubuwm x
+            - vpkuwum128 x
+            - vpkuwus128 x
+            - lvehx x
+    */
+
     case PPC_INST_MULHD:
         println("\t{}.s64 = (int64_t)((__int128){}.s64 * (__int128){}.s64 >> 64);",
                 r(insn.operands[0]), r(insn.operands[1]), r(insn.operands[2]));
@@ -2252,6 +2282,97 @@ bool Recompiler::Recompile(
     case PPC_INST_MULHDU:
         println("\t{}.u64 = (uint64_t)((__uint128_t){}.u64 * (__uint128_t){}.u64 >> 64);",
                 r(insn.operands[0]), r(insn.operands[1]), r(insn.operands[2]));
+        break;
+    
+    // Vector Add Signed Word Saturate: https://www.nxp.com/docs/en/reference-manual/ALTIVECPEM.pdf
+    case PPC_INST_VADDSWS:
+        println("\t_mm_store_si128((__m128i*){}.s32, _mm_adds_epu32(_mm_load_si128((__m128i*){}.s32), _mm_load_si128((__m128i*){}.s32)));", v(insn.operands[0]), v(insn.operands[1]), v(insn.operands[2]));
+        break;
+
+    // Vector Convert to Signed Fixed-Point Word Saturate: https://wiki.raptorcs.com/w/images/f/f1/PowerISA_V2.03_Final_Public.pdf
+    // VCFPUXWS128 (VMX) is a VMX128 instruction.
+    case PPC_INST_VCTUXS:
+    case PPC_INST_VCFPUXWS128:
+        printSetFlushMode(true);
+        print("\t_mm_store_si128((__m128i*){}.u32, _mm_vctuxs(", v(insn.operands[0]));
+        if (insn.operands[2] != 0)
+            println("_mm_mul_ps(_mm_load_ps({}.f32), _mm_set1_ps({}))));", v(insn.operands[1]), 1u << insn.operands[2]);
+        else
+            println("_mm_load_ps({}.f32)));", v(insn.operands[1]));
+        break;
+
+    // Vector Compare Greater-Than Unsigned Word: https://www.nxp.com/docs/en/reference-manual/ALTIVECPEM.pdf
+    case PPC_INST_VCMPGTUW:
+        println("\t_mm_store_si128((__m128i*){}.u32, _mm_cmpgt_epu8(_mm_load_si128((__m128i*){}.u32), _mm_load_si128((__m128i*){}.u32)));", v(insn.operands[0]), v(insn.operands[1]), v(insn.operands[2]));
+        break;
+    
+    // Vector Logical NOR: https://www.nxp.com/docs/en/reference-manual/ALTIVECPEM.pdf
+    // TODO: Verify the results are actually correct.
+    // There isn't exactly an intrinsic for NOR, but NOR = AND with negated inputs (based on a truth table).
+    // So, negate the inputs here to get a NOR.
+    case PPC_INST_VNOR:
+    case PPC_INST_VNOR128:
+        println("\t_mm_store_si128((__m128i*){}.u8, _mm_and_si128(-_mm_load_si128((__m128i*){}.u8), -_mm_load_si128((__m128i*){}.u8)));", v(insn.operands[0]), v(insn.operands[1]), v(insn.operands[2]));
+        break;
+
+    // Vector Pack Signed Word Signed Saturate: https://www.nxp.com/docs/en/reference-manual/ALTIVECPEM.pdf
+    // vpkswss128 (VMX) is a VMX128 instruction.
+    case PPC_INST_VPKSWSS:
+    case PPC_INST_VPKSWSS128:
+        println("\t_mm_store_si128((__m128i*){}.u8, _mm_packus_epi16(_mm_load_si128((__m128i*){}.s32), _mm_load_si128((__m128i*){}.s32)));", v(insn.operands[0]), v(insn.operands[2]), v(insn.operands[1]));
+        break;
+
+    // Vector Pack Unsigned Word Unsigned Modulo: https://www.nxp.com/docs/en/reference-manual/ALTIVECPEM.pdf
+    // vpkuwum (VMX) is a VMX128 instruction.
+    case PPC_INST_VPKUWUM:
+    case PPC_INST_VPKUWUM128:
+        println("\t_mm_store_si128((__m128i*){}.u8, _mm_and_si128(_mm_load_si128((__m128i*){}.s32), _mm_load_si128((__m128i*){}.s32)));", v(insn.operands[0]), v(insn.operands[2]), v(insn.operands[1]));
+        break;
+
+    // Vector Shift Left: https://www.nxp.com/docs/en/reference-manual/ALTIVECPEM.pdf
+    case PPC_INST_VSL:
+        println("\t_mm_store_si128((__m128i*){}.u8, _mm_vsl(_mm_load_si128((__m128i*){}.u8), _mm_load_si128((__m128i*){}.u8)));", v(insn.operands[0]), v(insn.operands[1]), v(insn.operands[2]));
+        break;
+        
+    // Vector Rotate Left Word: https://www.nxp.com/docs/en/reference-manual/ALTIVECPEM.pdf
+    // TODO: Verify functionality.
+    case PPC_INST_VRLW:
+    case PPC_INST_VRLW128:
+        println("\t_mm_store_si128((__m128i*){}.u8, _mm_rolv_epi32(_mm_load_si128((__m128i*){}.s32), _mm_load_si128((__m128i*){}.s32));", v(insn.operands[0]), v(insn.operands[1]), v(insn.operands[2]));
+        break;
+
+    // Vector Splat Immediate Signed Half Word: https://www.nxp.com/docs/en/reference-manual/ALTIVECPEM.pdf
+    // TODO: Verify functionality.
+    case PPC_INST_VSPLTISH:
+        println("\t_mm_store_si128((__m128i*){}.u8, _mm_set1_epi16({}));", v(insn.operands[0]), v(insn.operands[1]));
+        break;
+    
+    // Vector Subtract Byte Modulo: https://www.nxp.com/docs/en/reference-manual/ALTIVECPEM.pdf
+    // TODO: Verify functionality.
+    case PPC_INST_VSUBUBM:
+        println("\t_mm_store_si128((__m128i*){}.u8, _mm_sub_epi8(_mm_load_si128((__m128i*){}.u8), _mm_load_si128((__m128i*){}.u8)));", v(insn.operands[0]), v(insn.operands[1]), v(insn.operands[2]));
+        break;
+
+    // Vector Subtract Word Modulo: https://www.nxp.com/docs/en/reference-manual/ALTIVECPEM.pdf
+    // TODO: Verify functionality.
+    case PPC_INST_VSUBUWM:
+        println("\t_mm_store_si128((__m128i*){}.u8, _mm_sub_epi8(_mm_load_si128((__m128i*){}.u32), _mm_load_si128((__m128i*){}.u32)));", v(insn.operands[0]), v(insn.operands[1]), v(insn.operands[2]));
+        break;
+    
+    // Vector Pack Unsigned Words to Unsigned Modulo: https://www.nxp.com/docs/en/reference-manual/ALTIVECPEM.pdf
+    // TODO: Verify functionality. I am not sure if I can do this one without saturation(?) but I think it requires just truncation.
+    case PPC_INST_VPKUWUM:
+    case PPC_INST_VPKUWUM128:
+        __m128i mask = _mm_set1_epi32(0xFFFF);
+        println("\t_mm_store_si128((__m128i*){}.u8, _mm_packus_epi32(_mm_and_si128(_mm_load_si128((__m128i*){}.u32), {}), _mm_and_si128(_mm_load_si128((__m128i*){}.u32), {})));", v(insn.operands[0]), v(insn.operands[1]), mask, v(insn.operands[2]), mask);
+        break;
+
+    // Vector Pack Unsigned Words to Unsigned Saturated: https://www.nxp.com/docs/en/reference-manual/ALTIVECPEM.pdf
+    // TODO: Verify functionality.
+    case PPC_INST_VPKUWUS:
+    case PPC_INST_VPKUWUM128:
+        __m128i mask = _mm_set1_epi32(0xFFFF);
+        println("\t_mm_store_si128((__m128i*){}.u8, _mm_packus_epi32(_mm_and_si128(_mm_load_si128((__m128i*){}.u32), {}), _mm_and_si128(_mm_load_si128((__m128i*){}.u32), {})));", v(insn.operands[0]), v(insn.operands[1]), mask, v(insn.operands[2]), mask);
         break;
 
     default:
